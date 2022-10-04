@@ -1,5 +1,6 @@
 <template>
  <div>
+    <div v-if="isLoading" ref="loader" class="z-[100] absolute w-full flex justify-center items-center h-screen top-0 left-0 bg-black bg-opacity-30 text-white font-semibold"> Loading... </div>
     <header class="h-[35vh]">
         <div class="w-[90%] max-w-sm mx-auto pt-4">
             <h1 class="text-center font-bold text-lg text-white">IP Address Tracker</h1>
@@ -60,7 +61,8 @@ import L from "leaflet";
         postalCode: null,
         timezone: null,
         ISP: null,
-        fetchedIp: null
+        fetchedIp: null,
+        isLoading: false
     }
  },
  methods: {
@@ -83,26 +85,28 @@ import L from "leaflet";
             // .openPopup();
     },
     getIp(){
-        var url = 'https://geo.ipify.org/api/v2/country,city?apiKey=' + this.api_key + '&ipAddress=' + this.ip;
-            
+        this.addressObj = JSON.parse(localStorage.data)
         if(this.ip.length > 0){
-                
             if(this.addressObj.length > 0){   // if addressObj is not empty, then check if the IP address has been fetched
-                 this.addressObj.forEach(e => {
-                    if(e.ip == this.ip){
-                        this.fetchedIp = e.ip
-                        this.lat = e.location.lat;
-                        this.lng = e.location.lng;
-                        this.ISP = e.isp;
-                        this.timezone = 'UTC ' + e.location.timezone;
-                        this.city = e.location.city;
-                        this.country = e.location.country;
-                        this.postalCode = e.location.postalCode;
-                        console.log(this.lat, this.lng);
+                let e = this.addressObj.map(e => e.ip)
+                if(e.includes(this.ip)){
+                        this.fetchedIp = this.addressObj[e.indexOf(this.ip)].ip
+                        this.lat = this.addressObj[e.indexOf(this.ip)].location.lat;
+                        this.lng = this.addressObj[e.indexOf(this.ip)].location.lng;
+                        this.ISP = this.addressObj[e.indexOf(this.ip)].isp;
+                        this.timezone = 'UTC ' + this.addressObj[e.indexOf(this.ip)].location.timezone;
+                        this.city = this.addressObj[e.indexOf(this.ip)].location.city;
+                        this.country = this.addressObj[e.indexOf(this.ip)].location.country;
+                        this.postalCode = this.addressObj[e.indexOf(this.ip)].location.postalCode;
                     }else{  // fetch the IP address if it hasn't been fetched yet
-                         fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
+                        this.isLoading = true
+                        let clientFetchedIp = async () =>{
+                        const fetchedData = await this.fetchIp(this.ip)
+                        return fetchedData;
+                        }
+
+                        clientFetchedIp().then(data => {
+                            this.data = JSON.parse(localStorage.data)
                             this.data.push(data)
                             localStorage.data = JSON.stringify(this.data)
                             this.addressObj = JSON.parse(localStorage.data)
@@ -114,28 +118,31 @@ import L from "leaflet";
                             this.country = data.location.country;
                             this.postalCode = data.location.postalCode;
                             this.fetchedIp = data.ip
+                            this.isLoading = false
                         })
-                        .catch(error => console.log(error));
+                        .catch(error => console.error(error));
                     }
-                 })
             }else{
-                fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    this.data.push(data)
-                    localStorage.data = JSON.stringify(this.data)
-                    this.addressObj = JSON.parse(localStorage.data)
-                    console.log(this.addressObj);
-                    this.lat = data.location.lat;
-                    this.lng = data.location.lng;
-                    this.ISP = data.isp;
-                    this.timezone = 'UTC ' + data.location.timezone;
-                    this.city = data.location.city;
-                    this.country = data.location.country;
-                    this.postalCode = data.location.postalCode;
-                    this.fetchedIp = data.ip
-                })
-                .catch(error => console.log(error));
+                let clientFetchedIp = async () =>{
+                    const fetchedData = await this.fetchIp(this.ip)
+                    return fetchedData;
+                    }
+
+                    clientFetchedIp().then(data => {
+                        this.data = JSON.parse(localStorage.data)
+                        this.data.push(data)
+                        localStorage.data = JSON.stringify(this.data)
+                        this.addressObj = JSON.parse(localStorage.data)
+                        this.lat = data.location.lat;
+                        this.lng = data.location.lng;
+                        this.ISP = data.isp;
+                        this.timezone = 'UTC ' + data.location.timezone;
+                        this.city = data.location.city;
+                        this.country = data.location.country;
+                        this.postalCode = data.location.postalCode;
+                        this.fetchedIp = data.ip
+                    })
+                    .catch(error => console.error(error));
             }
         }else{
             alert('please input IP address!')
@@ -155,12 +162,8 @@ import L from "leaflet";
     }
  },
  mounted(){
-    this.initMap(); // initialize map on component mount
-     console.log(this.lat, this.lng, this.ISP, this.timezone, this.city, this.country, this.postalCode, this.fetchedIp);
-    
- },
- created(){
-    if(!localStorage.data){
+     if(!localStorage.data){
+        this.isLoading = true
         let clientFetchedIp = async () =>{
         const clientIp = await this.getClientIp()
         const fetchedData = await this.fetchIp(clientIp)
@@ -172,81 +175,61 @@ import L from "leaflet";
             localStorage.data = JSON.stringify(this.data)
             this.addressObj = JSON.parse(localStorage.data)
             console.log(this.addressObj);
+            this.lat = data.location.lat;
+            this.lng = data.location.lng;
+            this.ISP = data.isp;
+            this.timezone = 'UTC ' + data.location.timezone;
+            this.city = data.location.city;
+            this.country = data.location.country;
+            this.postalCode = data.location.postalCode;
+            this.fetchedIp = data.ip
+            this.initMap()
+            this.isLoading = false                                                        
         })
+        .then(err => console.error(err))
     }else{
         this.addressObj = JSON.parse(localStorage.data)
-        console.log(this.addressObj);
+        this.getClientIp().then(ip => {
+            let e = this.addressObj.map(e => e.ip)
+            
+            if(e.includes(ip)){
+                    console.log('it exists')
+                    this.lat = this.addressObj[e.indexOf(ip)].location.lat;
+                    this.lng = this.addressObj[e.indexOf(ip)].location.lng;
+                    this.ISP = this.addressObj[e.indexOf(ip)].isp;
+                    this.timezone = 'UTC ' + this.addressObj[e.indexOf(ip)].location.timezone;
+                    this.city = this.addressObj[e.indexOf(ip)].location.city;
+                    this.country = this.addressObj[e.indexOf(ip)].location.country;
+                    this.postalCode = this.addressObj[e.indexOf(ip)].location.postalCode;
+                    this.fetchedIp = this.addressObj[e.indexOf(ip)].ip
+                    this.initMap()
+                }else{
+                    this.isLoading = true
+                    this.fetchIp(ip).then(data => {
+                        this.data = JSON.parse(localStorage.data)
+                        this.data.push(data)
+                        localStorage.data = JSON.stringify(this.data)
+                        this.addressObj = JSON.parse(localStorage.data)
+                        console.log(this.addressObj);
+                        this.lat = data.location.lat;
+                        this.lng = data.location.lng;
+                        this.ISP = data.isp;
+                        this.timezone = 'UTC ' + data.location.timezone;
+                        this.city = data.location.city;
+                        this.country = data.location.country;
+                        this.postalCode = data.location.postalCode;
+                        this.fetchedIp = data.ip
+                        this.initMap()
+                        this.isLoading = false
+                    })
+                }
+        })
     }
-
-//     let clientIp
-//     let getClientIp = async () => {
-//         const res = await fetch('https://api.ipify.org?format=json')
-//         const data = await res.json()
-//         return data
-//     }
-//     if(!localStorage.data){
-//         getClientIp().then(data => clientIp = data.ip)
-//         var url = 'https://geo.ipify.org/api/v2/country,city?apiKey=' + this.api_key + '&ipAddress=' + clientIp;
-//        return fetch(url)
-//         .then(response => response.json())
-//         .then(data => {
-//             this.data.push(data)
-//             console.log(data)
-//             localStorage.data = JSON.stringify(this.data)
-//             this.addressObj = JSON.parse(localStorage.data)
-//             console.log(this.addressObj);
-//             this.lat = data.location.lat;
-//             this.lng = data.location.lng;
-//             this.ISP = data.isp;
-//             this.timezone = 'UTC ' + data.location.timezone;
-//             this.city = data.location.city;
-//             this.country = data.location.country;
-//             this.postalCode = data.location.postalCode;
-//             this.fetchedIp = data.ip
-//         })
-//         .catch(error => console.log(error));
-//     }else{
-//         this.addressObj = JSON.parse(localStorage.data)
-//         console.log(JSON.parse(localStorage.data))
-//         this.addressObj.forEach(e => {
-//         if(e.ip == clientIp){
-//             this.fetchedIp = e.ip
-//             this.lat = e.location.lat;
-//             this.lng = e.location.lng;
-//             this.ISP = e.isp;
-//             this.timezone = 'UTC ' + e.location.timezone;
-//             this.city = e.location.city;
-//             this.country = e.location.country;
-//             this.postalCode = e.location.postalCode;
-//             console.log(this.lat, this.lng);
-//         }else{
-//             var url = 'https://geo.ipify.org/api/v2/country,city?apiKey=' + this.api_key + '&ipAddress=' + clientIp;
-//            return fetch(url)
-//             .then(response => response.json())
-//             .then(data => {
-//                 this.data.push(data)
-//                 localStorage.data = JSON.stringify(this.data)
-//                 this.addressObj = JSON.parse(localStorage.data)
-//                 console.log(this.addressObj);
-//                 this.lat = data.location.lat;
-//                 this.lng = data.location.lng;
-//                 this.ISP = data.isp;
-//                 this.timezone = 'UTC ' + data.location.timezone;
-//                 this.city = data.location.city;
-//                 this.country = data.location.country;
-//                 this.postalCode = data.location.postalCode;
-//                 this.fetchedIp = data.ip
-//             })
-//             .catch(error => console.log(error));
-//         }
-//     })
-//     }
-//     // this.addressObj = data;
-    
-//     // this.addressObj.forEach(e => console.log(e))
-//         //  fetch('https://api.ipify.org?format=json')
-//         // .then(response => response.json())
-//         // .then(data => console.log(data.ip))
+ },
+ watch: {
+    log(){
+        console.log('changed');
+    }
  }
 
 }
