@@ -1,6 +1,6 @@
 <template>
  <div>
-    <div v-if="isLoading" ref="loader" class="z-[100] absolute w-full flex justify-center items-center h-screen top-0 left-0 bg-black bg-opacity-30 text-white font-semibold"> Loading... </div>
+    <!-- <div v-if="isLoading" ref="loader" class="z-[100] absolute w-full flex justify-center items-center h-screen top-0 left-0 bg-black bg-opacity-30 text-white font-semibold"> Loading... </div> -->
     <header class="h-[35vh]">
         <div class="w-[90%] max-w-sm mx-auto pt-4">
             <h1 class="text-center font-bold text-lg text-white">IP Address Tracker</h1>
@@ -13,25 +13,30 @@
             </div>
         </div>
     </header>
-    <div 
-        class="md:grid grid-cols-4 md:text-left md:divide-x divide-neutral-200 divide-solid absolute bg-white p-6 md:py-6 md:px-0 top-[23%] md:top-1/4 lg:top-[25%] z-20 rounded-xl text-center w-[90%] md:w-4/5 max-w-4xl left-5 xl:left-[17%] md:inset-x-24 shadow-2xl"
-        >
-        <ipInfo 
-        class=""
-        subTitle="IP ADDRESS"
-        :title="fetchedIp" />
-        <ipInfo 
-        class=""
-        subTitle="LOCATION"
-        :title="city + ', ' + country + ' ' + postalCode" />
-        <ipInfo 
-        class=""
-        subTitle="TIMEZONE"
-        :title="timezone" />
-        <ipInfo 
-        class=""
-        subTitle="ISP"
-        :title="ISP" />
+    <div class="flex justify-center items-center absolute bg-white top-[23%] md:top-1/4 lg:top-[25%] z-20 rounded-xl w-[90%] md:w-4/5 max-w-4xl left-5 xl:left-[17%] md:inset-x-24 shadow-2xl" :class="{ 'h-32': isLoading }">
+        <div 
+            v-if="!isLoading"
+            class="md:grid grid-cols-4 md:text-left md:divide-x divide-neutral-200 divide-solid p-6 md:py-6 md:px-0  text-center w-full"
+            >
+            <ipInfo 
+            class=""
+            subTitle="IP ADDRESS"
+            :title="fetchedIp" />
+            <ipInfo 
+            class=""
+            subTitle="LOCATION"
+            :title="city + ', ' + country + ' ' + postalCode" />
+            <ipInfo 
+            class=""
+            subTitle="TIMEZONE"
+            :title="timezone" />
+            <ipInfo 
+            class=""
+            subTitle="ISP"
+            :title="ISP" />
+        </div>
+        <div v-else class="loader">
+        </div>
     </div>
     <div id="map" class="h-[65vh] z-10"></div>
  </div>
@@ -62,34 +67,36 @@ import L from "leaflet";
         timezone: null,
         ISP: null,
         fetchedIp: null,
-        isLoading: false
+        isLoading: true,
+        map: null,
+        myIcon: null
     }
  },
  methods: {
     
     initMap(){
-        var map = L.map('map').setView([this.lat, this.lng], 17);
+        this.map = L.map('map').setView([this.lat, this.lng], 17);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        }).addTo(this.map);
 
-        var myIcon = L.icon({
+        this.myIcon = L.icon({
             iconUrl: '../src/assets/images/icon-location.svg',
             iconSize: [30, 35],
             iconAnchor: [22, 64],
             popupAnchor: [-7, -56],
         });
-        L.marker([this.lat, this.lng], {icon: myIcon}).addTo(map)
-            // .bindPopup('A pretty CSS3 popup.<br> Easily customizable.')
-            // .openPopup();
+        L.marker([this.lat, this.lng], {icon: this.myIcon}).addTo(this.map)
+            .bindPopup('Your Location')
+            .openPopup();
     },
     getIp(){
         this.addressObj = JSON.parse(localStorage.data)
-        if(this.ip.length > 0){
-            if(this.addressObj.length > 0){   // if addressObj is not empty, then check if the IP address has been fetched
+        if(this.ip.length > 0){ 
                 let e = this.addressObj.map(e => e.ip)
                 if(e.includes(this.ip)){
+                    this.isLoading = false
                         this.fetchedIp = this.addressObj[e.indexOf(this.ip)].ip
                         this.lat = this.addressObj[e.indexOf(this.ip)].location.lat;
                         this.lng = this.addressObj[e.indexOf(this.ip)].location.lng;
@@ -98,14 +105,20 @@ import L from "leaflet";
                         this.city = this.addressObj[e.indexOf(this.ip)].location.city;
                         this.country = this.addressObj[e.indexOf(this.ip)].location.country;
                         this.postalCode = this.addressObj[e.indexOf(this.ip)].location.postalCode;
+                        L.marker([this.lat, this.lng], {icon: this.myIcon}).addTo(this.map)
+                        .bindPopup('Your Location')
+                        .openPopup();
+                        this.map.flyTo(L.latLng(this.lat, this.lng))
+                        this.ip = ''
                     }else{  // fetch the IP address if it hasn't been fetched yet
-                        this.isLoading = true
+                    this.isLoading = true
                         let clientFetchedIp = async () =>{
                         const fetchedData = await this.fetchIp(this.ip)
                         return fetchedData;
                         }
 
                         clientFetchedIp().then(data => {
+                            this.isLoading = false
                             this.data = JSON.parse(localStorage.data)
                             this.data.push(data)
                             localStorage.data = JSON.stringify(this.data)
@@ -118,32 +131,14 @@ import L from "leaflet";
                             this.country = data.location.country;
                             this.postalCode = data.location.postalCode;
                             this.fetchedIp = data.ip
-                            this.isLoading = false
+                            L.marker([this.lat, this.lng], {icon: this.myIcon}).addTo(this.map)
+                            .bindPopup('Your Location')
+                            .openPopup();
+                            this.map.flyTo(L.latLng(this.lat, this.lng))
+                            this.ip = ''
                         })
                         .catch(error => console.error(error));
                     }
-            }else{
-                let clientFetchedIp = async () =>{
-                    const fetchedData = await this.fetchIp(this.ip)
-                    return fetchedData;
-                    }
-
-                    clientFetchedIp().then(data => {
-                        this.data = JSON.parse(localStorage.data)
-                        this.data.push(data)
-                        localStorage.data = JSON.stringify(this.data)
-                        this.addressObj = JSON.parse(localStorage.data)
-                        this.lat = data.location.lat;
-                        this.lng = data.location.lng;
-                        this.ISP = data.isp;
-                        this.timezone = 'UTC ' + data.location.timezone;
-                        this.city = data.location.city;
-                        this.country = data.location.country;
-                        this.postalCode = data.location.postalCode;
-                        this.fetchedIp = data.ip
-                    })
-                    .catch(error => console.error(error));
-            }
         }else{
             alert('please input IP address!')
         }
@@ -174,7 +169,6 @@ import L from "leaflet";
             this.data.push(data)
             localStorage.data = JSON.stringify(this.data)
             this.addressObj = JSON.parse(localStorage.data)
-            console.log(this.addressObj);
             this.lat = data.location.lat;
             this.lng = data.location.lng;
             this.ISP = data.isp;
@@ -193,7 +187,7 @@ import L from "leaflet";
             let e = this.addressObj.map(e => e.ip)
             
             if(e.includes(ip)){
-                    console.log('it exists')
+                    this.isLoading = false
                     this.lat = this.addressObj[e.indexOf(ip)].location.lat;
                     this.lng = this.addressObj[e.indexOf(ip)].location.lng;
                     this.ISP = this.addressObj[e.indexOf(ip)].isp;
@@ -210,7 +204,6 @@ import L from "leaflet";
                         this.data.push(data)
                         localStorage.data = JSON.stringify(this.data)
                         this.addressObj = JSON.parse(localStorage.data)
-                        console.log(this.addressObj);
                         this.lat = data.location.lat;
                         this.lng = data.location.lng;
                         this.ISP = data.isp;
@@ -225,11 +218,6 @@ import L from "leaflet";
                 }
         })
     }
- },
- watch: {
-    log(){
-        console.log('changed');
-    }
  }
 
 }
@@ -240,4 +228,14 @@ header{
     background-size: cover;
 }
 
+.loader{
+    @apply w-8 h-8 rounded-full border-solid border-4 border-black/20 border-r-4 border-r-black/70;
+    animation: spin 950ms infinite linear;
+}
+
+@keyframes spin {
+    to{
+        transform: rotate(360deg);
+    }
+}
 </style>
