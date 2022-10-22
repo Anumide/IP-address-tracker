@@ -5,9 +5,9 @@
         <div class="w-[90%] max-w-sm mx-auto pt-4">
             <h1 class="text-center font-bold text-lg text-white">IP Address Tracker</h1>
             <div class="flex my-6 overflow-hidden rounded-xl">
-                <input class="p-3 grow focus:outline-none text-sm" v-model="ip" type="text" placeholder="Search for any IP address or domain">
+                <input class="p-3 grow focus:outline-none text-sm" v-model="ip" type="text" placeholder="Search for any IP address or domain" @keyup.enter="getIp">
                 <div class="bg-black w-[12%] hover:bg-gray-800 focus:bg-slate-800 cursor-pointer transition-all duration-200 flex justify-center items-center"
-                @click="getIp" @keydown.enter="getIp">
+                @click="getIp">
                     <img src="../assets/images/icon-arrow.svg" alt="" class="w-1/5 h-1/4">
                 </div>
             </div>
