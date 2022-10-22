@@ -82,7 +82,7 @@ import L from "leaflet";
         }).addTo(this.map);
 
         this.myIcon = L.icon({
-            iconUrl: '../src/assets/images/icon-location.svg',
+            iconUrl: 'https://png.pngtree.com/png-vector/20190419/ourmid/pngtree-vector-location-icon-png-image_956422.jpg',
             iconSize: [30, 35],
             iconAnchor: [22, 64],
             popupAnchor: [-7, -56],
