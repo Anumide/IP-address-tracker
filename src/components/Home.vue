@@ -83,9 +83,9 @@ import L from "leaflet";
 
         this.myIcon = L.icon({
             iconUrl: 'https://cdn-icons-png.flaticon.com/128/3082/3082383.png',
-            iconSize: [30, 35],
+            iconSize: [30, 30],
             iconAnchor: [22, 64],
-            popupAnchor: [-7, -56],
+            popupAnchor: [-10, -56],
         });
         L.marker([this.lat, this.lng], {icon: this.myIcon}).addTo(this.map)
             .bindPopup('Your Location')
